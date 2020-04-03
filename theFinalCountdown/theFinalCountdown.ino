@@ -19,10 +19,19 @@ int melodyLength = sizeof(melody)/sizeof(melody[0]);
 
 #define SPEAKERPIN 8
 float noteWaitFactor = 1.3;
-int melodyLengthMs = 20000;
+int melodyLengthMs = 2000;
 void setup()
 {
-  // int noteDuration = 180;
+  Serial.begin(115200);
+  playTheSong();
+}
+
+void loop() {
+  doCoolPiano();
+}
+
+void playTheSong()
+{
   int noteDuration = melodyLengthMs / (melodyLength * (1 + noteWaitFactor));
   for (int i = 0; i < melodyLength; i++)
   {
@@ -36,7 +45,20 @@ void setup()
     delay(pauseBetweenNotes);
   }
 }
+void doCoolPiano(){
+  if (Serial.available() > 0)
+  {
+    int keyboard[]={'q','w','e','r','t','y','u','i'};
+    int notes[] = {NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5};
+    int receivedChar = Serial.read();
+    int note = 0;
+    for(int i = 0; i<8; i++){
+      if(receivedChar==keyboard[i]){
+        note = notes[i];
+        break;
+      }
+    }
 
-void loop() {
-  // no need to repeat the melody.
+    tone(SPEAKERPIN, note,250);
+  }
 }
