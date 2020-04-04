@@ -8,10 +8,12 @@
 #include "pitches.h"
 #include "Adafruit_NeoPixel.h"
 
-#define SPEAKERPIN 8
+#define SPEAKERPIN 2
 #define Neo_PIN 3
-#define button_PIN 4
-#define NUM_LEDS 2
+#define button_PIN 6
+#define buttonGND_PIN 7
+
+#define NUM_LEDS 4
 
 int melody[] = {
     NOTE_C4, NOTE_C4, NOTE_G4, NOTE_G4, NOTE_A4, NOTE_A4, NOTE_G4,0,
@@ -24,18 +26,20 @@ int melody[] = {
 int melodyLength = sizeof(melody)/sizeof(melody[0]);
 
 float noteWaitFactor = 1.3;
-int melodyLengthMs = 2000;
+int melodyLengthMs = 10000;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, Neo_PIN, NEO_GRB + NEO_KHZ800);
 void setup()
 {
   pinMode(button_PIN, INPUT);
+  pinMode(buttonGND_PIN, OUTPUT);
   digitalWrite(button_PIN, HIGH);
+  digitalWrite(buttonGND_PIN, LOW);
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   Serial.begin(115200);
-  LEDfadeChange(150,250,30,500);
-  playTheSong();
+  LEDfadeChange(10,10,10,500);
+  // playTheSong();
 }
 
 void loop()
@@ -47,7 +51,7 @@ void loop()
     LEDfadeChange(250,10,10,500);
     playTheSong();
     LEDfadeChange(10,250,10,500);
-    LEDfadeChange(10,10,10,2000);
+    LEDfadeChange(1,1,1,2000);
   }
 }
 
