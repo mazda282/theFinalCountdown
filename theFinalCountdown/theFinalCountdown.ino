@@ -44,15 +44,39 @@ void setup()
 
 void loop()
 {
-  doCoolPiano();
+  // doCoolPiano();
   // if (checkButton() == 1)
   if (digitalRead(button_PIN) == 0)
   {
-    LEDfadeChange(250,10,10,500);
-    playTheSong();
-    LEDfadeChange(10,250,10,500);
-    LEDfadeChange(1,1,1,2000);
+    // LEDfadeChange(250,10,10,500);
+    // LEDfadeChange(10,10,10,500);
+    washHands();
+    // LEDfadeChangeNonBlock(250,10,10,1500, true);
+    // playTheSong();
+    // playSong(true);
+    // LEDfadeChange(10,250,10,500);
+    // LEDfadeChange(1,1,1,2000);
   }
+  // playSong(false);
+  // LEDfadeChangeNonBlock(250,10,10,1500, false);
+  // delay(5);
+}
+
+void washHands()
+{
+  LEDfadeChangeNonBlock(250, 10, 10, 1000, true);
+  playSong(true);
+  unsigned long startTime = millis();
+  unsigned long now = millis();
+  while ((now - startTime) < melodyLengthMs)
+  {
+    now = millis();
+    LEDfadeChangeNonBlock(0, 0, 0, 0, false);
+    playSong(false);
+    delay(5);
+  }
+  LEDfadeChange(10,250,10,500);
+  LEDfadeChange(1,1,1,2000);
 }
 
 void playTheSong()
@@ -70,32 +94,51 @@ void playTheSong()
     delay(pauseBetweenNotes);
   }
 }
-void doCoolPiano(){
-  if (Serial.available() > 0)
+
+//Can play a song without blocking the CPU. Send restartSong == true to restart the song. otherwise send False
+void playSong(bool restartSong)
+{
+  unsigned long now = millis();
+  // static unsigned long startTime = 0;
+  static unsigned long lastChange = 0;
+  static int noteCtr = 1000;
+  int noteDuration = melodyLengthMs / (melodyLength * (1 + noteWaitFactor));
+  int pauseBetweenNotes = noteDuration * noteWaitFactor;
+  if(restartSong)
   {
-    int keyboard[]={'q','w','e','r','t','y','u','i'};
-    int notes[] = {NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5};
-    int receivedChar = Serial.read();
-    int note = 0;
-    for(int i = 0; i<8; i++){
-      if(receivedChar==keyboard[i]){
-        note = notes[i];
-        break;
-      }
+    // startTime = now;
+    lastChange = now;
+    noteCtr = 0;
+    tone(SPEAKERPIN, melody[noteCtr]);
+  }
+  if ((now - lastChange) > (noteDuration + pauseBetweenNotes) && (noteCtr < melodyLength))
+  {
+    noteCtr++;
+    lastChange = now;
+    if (melody[noteCtr] != 0)
+    {
+      tone(SPEAKERPIN, melody[noteCtr]);
     }
-    LEDfadeChange(note,note/2,note/3,50);
-    tone(SPEAKERPIN, note,250);
+    else
+    {
+      noTone(SPEAKERPIN);
+    }
+  }
+  else if (((now - lastChange) > noteDuration) && (noteCtr < melodyLength))
+  {
+    noTone(SPEAKERPIN);
   }
 }
+
 
 void LEDfadeChange(uint8_t r, uint8_t g, uint8_t b, uint16_t changetime)
 {
   uint32_t startColor = strip.getPixelColor(0);
 
- uint8_t  r_start = (uint8_t)(startColor >> 16);
- uint8_t  g_start = (uint8_t)(startColor >>  8);
- uint8_t b_start =  (uint8_t) startColor;
-  
+  uint8_t r_start = (uint8_t)(startColor >> 16);
+  uint8_t g_start = (uint8_t)(startColor >> 8);
+  uint8_t b_start = (uint8_t)startColor;
+
   int steps=changetime/4;
   for(int j = 1; j<=steps; j++)
   {
@@ -115,6 +158,77 @@ void LEDfadeChange(uint8_t r, uint8_t g, uint8_t b, uint16_t changetime)
     // }
   }
 }
+
+void LEDfadeChangeNonBlock(uint8_t r, uint8_t g, uint8_t b, uint16_t changetime, bool newVal)
+{
+  static unsigned long lastChange = 0;
+  static uint32_t startColor = 0;
+  static uint8_t r_start = 0;
+  static uint8_t g_start = 0;
+  static uint8_t b_start = 0;
+  static uint8_t r_goal = 0;
+  static uint8_t g_goal = 0;
+  static uint8_t b_goal = 0;
+  static int steps = 1;
+  static int stepCtr = 1000;
+  static int stepDuration = changetime / steps;
+  unsigned long now = millis();
+
+  if(newVal){
+    lastChange = now;
+    startColor = strip.getPixelColor(0);
+    r_start = (uint8_t)(startColor >> 16);
+    g_start = (uint8_t)(startColor >> 8);
+    b_start = (uint8_t)startColor;
+    steps=changetime/4;
+    stepCtr = 0;
+    r_goal = r;
+    g_goal = g;
+    b_goal = b;
+
+    stepDuration = changetime / steps;
+  }
+
+  if (((now - lastChange) > stepDuration) && (stepCtr < steps))
+  {
+    lastChange = now;
+    stepCtr++;
+    // for(int j = 1; j<=steps; j++)
+    // {
+    float fac = (1.0 * stepCtr) / steps;
+    for (uint16_t i = 0; i < strip.numPixels(); i++)
+    {
+
+      strip.setPixelColor(i, r_start * (1.0 - fac) + r_goal * fac, g_start * (1 - fac) + g_goal * fac, b_start * (1 - fac) + b_goal * fac);
+    }
+    strip.show();
+    // delay(changetime / steps);
+  }
+  // }
+}
+
+
+
+void doCoolPiano(){
+  if (Serial.available() > 0)
+  {
+    int keyboard[]={'q','w','e','r','t','y','u','i'};
+    int notes[] = {NOTE_C4, NOTE_D4, NOTE_E4, NOTE_F4, NOTE_G4, NOTE_A4, NOTE_B4, NOTE_C5};
+    int receivedChar = Serial.read();
+    int note = 0;
+    for(int i = 0; i<8; i++){
+      if(receivedChar==keyboard[i]){
+        note = notes[i];
+        break;
+      }
+    }
+    LEDfadeChange(note,note/2,note/3,50);
+    tone(SPEAKERPIN, note,250);
+  }
+}
+
+
+
 //Todo: This debounce function doesnt work properly...
 int checkButton()
 {
