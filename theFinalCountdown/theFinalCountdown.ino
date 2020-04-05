@@ -26,7 +26,7 @@ int melody[] = {
 int melodyLength = sizeof(melody)/sizeof(melody[0]);
 
 float noteWaitFactor = 1.3;
-int melodyLengthMs = 10000;
+int melodyLengthMs = 20000;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, Neo_PIN, NEO_GRB + NEO_KHZ800);
 void setup()
@@ -64,18 +64,37 @@ void loop()
 
 void washHands()
 {
-  LEDfadeChangeNonBlock(250, 10, 10, 1000, true);
-  playSong(true);
-  unsigned long startTime = millis();
+  // LEDfadeChangeNonBlock(250, 10, 10, 1000,-1, true);
+  unsigned long lastChange = millis();
   unsigned long now = millis();
-  while ((now - startTime) < melodyLengthMs)
+  // while ((now - startTime) < melodyLengthMs)
+  int stepCtr = 0;
+  int steps = 5;
+  int changetime = melodyLengthMs;
+  int stepDuration = changetime / steps;
+  LEDfadeChange(250,10,10,500);
+  
+  LEDfadeChangeNonBlock(0, 250, 0, 500,stepCtr, true);
+  
+  bool playSongRet = playSong(true);
+  while (playSongRet!=0)
   {
     now = millis();
-    LEDfadeChangeNonBlock(0, 0, 0, 0, false);
-    playSong(false);
-    delay(5);
+    if (((now - lastChange) > stepDuration) && (stepCtr < steps))
+    {
+      stepCtr++;
+      LEDfadeChangeNonBlock(0, 250, 0, 1000,stepCtr, true);
+      lastChange = now;
+    }
+
+    LEDfadeChangeNonBlock(0, 0, 0, 500,stepCtr, false);
+    playSongRet = playSong(false);
+    delay(20);
   }
-  LEDfadeChange(10,250,10,500);
+  LEDfadeChange(1,1,1,250);
+  LEDfadeChange(10,250,10,250);
+  LEDfadeChange(1,1,1,250);
+  LEDfadeChange(10,250,10,250);
   LEDfadeChange(1,1,1,2000);
 }
 
@@ -96,8 +115,9 @@ void playTheSong()
 }
 
 //Can play a song without blocking the CPU. Send restartSong == true to restart the song. otherwise send False
-void playSong(bool restartSong)
+bool playSong(bool restartSong)
 {
+  bool retVal = true;
   unsigned long now = millis();
   // static unsigned long startTime = 0;
   static unsigned long lastChange = 0;
@@ -128,6 +148,10 @@ void playSong(bool restartSong)
   {
     noTone(SPEAKERPIN);
   }
+  if(noteCtr >= melodyLength){
+    retVal = false;
+  }
+  return retVal;
 }
 
 
@@ -159,7 +183,7 @@ void LEDfadeChange(uint8_t r, uint8_t g, uint8_t b, uint16_t changetime)
   }
 }
 
-void LEDfadeChangeNonBlock(uint8_t r, uint8_t g, uint8_t b, uint16_t changetime, bool newVal)
+void LEDfadeChangeNonBlock(uint8_t r, uint8_t g, uint8_t b, uint16_t changetime, int ledNo, bool newVal)
 {
   static unsigned long lastChange = 0;
   static uint32_t startColor = 0;
@@ -176,7 +200,11 @@ void LEDfadeChangeNonBlock(uint8_t r, uint8_t g, uint8_t b, uint16_t changetime,
 
   if(newVal){
     lastChange = now;
-    startColor = strip.getPixelColor(0);
+    int index = ledNo;
+    if(ledNo==-1){
+      index = 0;
+    }
+    startColor = strip.getPixelColor(index);
     r_start = (uint8_t)(startColor >> 16);
     g_start = (uint8_t)(startColor >> 8);
     b_start = (uint8_t)startColor;
@@ -193,18 +221,23 @@ void LEDfadeChangeNonBlock(uint8_t r, uint8_t g, uint8_t b, uint16_t changetime,
   {
     lastChange = now;
     stepCtr++;
-    // for(int j = 1; j<=steps; j++)
-    // {
     float fac = (1.0 * stepCtr) / steps;
-    for (uint16_t i = 0; i < strip.numPixels(); i++)
+    int ledsToIterateOver = ledNo;
+    if (ledNo == -1)
     {
+      ledsToIterateOver = strip.numPixels();
+      for (uint16_t i = 0; i < ledsToIterateOver; i++)
+      {
 
-      strip.setPixelColor(i, r_start * (1.0 - fac) + r_goal * fac, g_start * (1 - fac) + g_goal * fac, b_start * (1 - fac) + b_goal * fac);
+        strip.setPixelColor(i, r_start * (1.0 - fac) + r_goal * fac, g_start * (1 - fac) + g_goal * fac, b_start * (1 - fac) + b_goal * fac);
+      }
+    }
+    else
+    {
+      strip.setPixelColor(ledsToIterateOver, r_start * (1.0 - fac) + r_goal * fac, g_start * (1 - fac) + g_goal * fac, b_start * (1 - fac) + b_goal * fac);
     }
     strip.show();
-    // delay(changetime / steps);
   }
-  // }
 }
 
 
