@@ -1,8 +1,10 @@
 /*
-  Melody
-  Plays a melody
+  The final countdown
+  Plays a melody while you wash your hands
   circuit:
-  - 8 ohm speaker on digital pin 8
+  - a buzzer
+  - a button
+  - a ws2812 led strip
 */
 
 #include "pitches.h"
@@ -45,21 +47,25 @@ void setup()
 void loop()
 {
   // doCoolPiano();
-  // if (checkButton() == 1)
   if (digitalRead(button_PIN) == 0)
   {
-    // LEDfadeChange(250,10,10,500);
-    // LEDfadeChange(10,10,10,500);
     washHands();
-    // LEDfadeChangeNonBlock(250,10,10,1500, true);
-    // playTheSong();
-    // playSong(true);
-    // LEDfadeChange(10,250,10,500);
-    // LEDfadeChange(1,1,1,2000);
+
   }
-  // playSong(false);
-  // LEDfadeChangeNonBlock(250,10,10,1500, false);
-  // delay(5);
+  powerbankKeepAlive(); 
+}
+
+//Function used to keep a powerbank from powering down. It basically just turns the leds on and off every 30s.
+void powerbankKeepAlive()
+{
+  static unsigned long LastBlinkTime;
+  unsigned long time = millis();
+  if ((time - LastBlinkTime) >= 30000)
+  {
+    LEDfadeChange(100, 100, 100, 250);
+    LEDfadeChange(0, 0, 0, 250);
+    LastBlinkTime = time;
+  }
 }
 
 void washHands()
